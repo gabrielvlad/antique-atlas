@@ -1,6 +1,8 @@
 <!--suppress HtmlDeprecatedTag, XmlDeprecatedElement -->
-<center><img alt="mod preview" src="https://cdn.modrinth.com/data/Y5Ve4Ui4/images/278bd4bd11e1bfca43de4b41969aacfbe7acfc5b.png" /></center>
 
+#This is just a fork for personal use, I did not made this mod, any changes to this fork in written commits by me, are not related to the source, the purpose of this fork is just to explore the source code and maybe make some changes for personal use only :)
+
+<center><img alt="mod preview" src="https://cdn.modrinth.com/data/Y5Ve4Ui4/images/278bd4bd11e1bfca43de4b41969aacfbe7acfc5b.png" /></center>
 <center>
 A hand-drawn client-side world map with biomes, structures, waypoints, and less!<br/>
 A rewrite of <a href="https://modrinth.com/mod/antique-atlas">Antique Atlas</a> by <a href="https://github.com/Hunternif">Hunternif</a>, as continued by <a href="https://github.com/Kenkron">Kenkron</a>, <a href="https://github.com/asiekierka">asie</a>, and <a href="https://github.com/tyra314">tyra314</a>.<br/>
