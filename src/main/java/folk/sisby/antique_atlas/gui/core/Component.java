@@ -44,10 +44,6 @@ public class Component extends Screen {
      * If true, this GUI will not be rendered.
      */
     private boolean isClipped = false;
-    /**
-     * This flag is updated on every mouse event.
-     */
-    protected boolean isMouseOver = false;
 
     /**
      * guiX and guiY are absolute coordinates on the screen.
@@ -117,18 +113,6 @@ public class Component extends Screen {
      */
     public final void offsetGuiCoords(int dx, int dy) {
         setGuiCoords(guiX + dx, guiY + dy);
-    }
-
-    /**
-     * Position this component in the center of its parent.
-     */
-    protected final void setCentered() {
-        validateSize();
-        if (parent == null) {
-            setGuiCoords((this.width - getWidth()) / 2, (this.height - getHeight()) / 2);
-        } else {
-            setRelativeCoords((parent.getWidth() - getWidth()) / 2, (parent.getHeight() - getHeight()) / 2);
-        }
     }
 
     /**
@@ -261,16 +245,7 @@ public class Component extends Screen {
     }
 
     boolean iterateMouseInput(UiCall callMethod) {
-        isMouseOver = isMouseInRegion(getGuiX(), getGuiY(), getWidth(), getHeight());
-        if (!iterateInput((c) -> {
-            c.isMouseOver = c.isMouseInRegion(c.getGuiX(), c.getGuiY(), c.getWidth(), c.getHeight());
-            return callMethod.call(c);
-        })) {
-            return false;
-        } else {
-            isMouseOver = false;
-            return true;
-        }
+        return iterateInput(callMethod);
     }
 
     /**
@@ -409,7 +384,7 @@ public class Component extends Screen {
      * Width of the GUI or its contents. This method may be called often so it
      * should be fast.
      */
-    protected int getWidth() {
+    public int getWidth() {
         return contentWidth;
     }
 
@@ -417,7 +392,7 @@ public class Component extends Screen {
      * Height of the GUI or its contents. This method may be called often so it
      * should be fast.
      */
-    protected int getHeight() {
+    public int getHeight() {
         return contentHeight;
     }
 
@@ -470,14 +445,9 @@ public class Component extends Screen {
         sizeIsInvalid = false;
     }
 
-    /**
-     * Returns true, if the mouse cursor is within the specified bounds.
-     * Note: left and top are absolute.
-     */
-    boolean isMouseInRegion(int left, int top, int width, int height) {
-        double mouseX = getMouseX();
-        double mouseY = getMouseY();
-        return mouseX >= left && mouseX < left + width && mouseY >= top && mouseY < top + height;
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        return mouseX >= getGuiX() && mouseX < getGuiX() + getWidth() && mouseY >= getGuiY() && mouseY < getGuiY() + getHeight();
     }
 
     /**
@@ -488,7 +458,10 @@ public class Component extends Screen {
     private void drawHoveringText2(DrawContext context, List<Text> lines, double x, double y, TextRenderer font) {
         boolean stencilEnabled = GL11.glIsEnabled(GL11.GL_STENCIL_TEST);
         if (stencilEnabled) GL11.glDisable(GL11.GL_STENCIL_TEST);
-        context.drawTooltip(font, lines, (int) x, (int) y);
+        context.getMatrices().push();
+        context.getMatrices().translate(x, y, 0);
+        context.drawTooltip(font, lines, 0, 0);
+        context.getMatrices().pop();
         if (stencilEnabled) GL11.glEnable(GL11.GL_STENCIL_TEST);
     }
 

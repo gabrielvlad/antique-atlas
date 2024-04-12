@@ -1,89 +1,118 @@
 package folk.sisby.antique_atlas.gui.core;
 
 import folk.sisby.antique_atlas.AntiqueAtlas;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.client.util.math.Rect2i;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
 public class ScrollBoxComponent extends Component {
-    public static final Identifier SCROLLBAR_HOR = AntiqueAtlas.id("textures/gui/scrollbar_hor.png");
-    public static final Identifier SCROLLBAR_VER = AntiqueAtlas.id("textures/gui/scrollbar_ver.png");
+    public static final Identifier ARROW = AntiqueAtlas.id("textures/gui/arrow.png");
+    public static final int ARROW_SIZE = 16;
+    public static final int ARROW_TEXTURE_WIDTH = 32;
+    public static final int ARROW_TEXTURE_HEIGHT = 64;
+
+    private final int scrollStep;
+    private final boolean vertical;
     private final ViewportComponent viewport;
-    private final HScrollbarComponent scrollbarHor;
-    private final VScrollbarComponent scrollbarVer;
 
-    public ScrollBoxComponent() {
-        viewport = new ViewportComponent();
-        scrollbarHor = new HScrollbarComponent(viewport);
-        scrollbarHor.setTexture(SCROLLBAR_HOR, 8, 7, 2);
-        scrollbarVer = new VScrollbarComponent(viewport);
-        scrollbarVer.setTexture(SCROLLBAR_VER, 7, 8, 2);
-        setWheelScrollsVertically();
+    /**
+     * How much the content of the viewport is displaced.
+     */
+    int scrollPos = 0;
+
+    public ScrollBoxComponent(boolean vertical, int scrollStep) {
+        this.vertical = vertical;
+        this.scrollStep = scrollStep;
+        this.viewport = new ViewportComponent();
         this.addChild(viewport);
-        this.addChild(scrollbarHor);
-        this.addChild(scrollbarVer);
     }
 
-    /**
-     * Add scrolling content. Use removeContent to remove it.
-     *
-     * @return the child added
-     */
-    public Component addContent(Component child) {
-        return viewport.addContent(child);
-    }
-
-    public void removeAllContent() {
-        viewport.removeAllContent();
-    }
-
-    public void setViewportSize(int width, int height) {
-        viewport.setSize(width, height);
-        scrollbarHor.setRelativeCoords(0, height);
-        scrollbarHor.setSize(width, scrollbarHor.getHeight());
-        scrollbarVer.setRelativeCoords(width, 0);
-        scrollbarVer.setSize(scrollbarVer.getWidth(), height);
+    public void renderArrow(DrawContext context, int mouseX, int mouseY, boolean prev) {
+        int x = !vertical ? (prev ? getGuiX() - ARROW_SIZE : getGuiX() + getWidth()) : getGuiX() + (getWidth() - ARROW_SIZE) / 2;
+        int y = vertical ? (prev ? getGuiY() - ARROW_SIZE : getGuiY() + getHeight()) : getGuiY() + (getHeight() - ARROW_SIZE) / 2;
+        boolean hovered = new Rect2i(x, y, ARROW_SIZE, ARROW_SIZE).contains(mouseX, mouseY);
+        int u = (prev ? 0 : ARROW_SIZE);
+        int v = (vertical ? 0 : ARROW_SIZE) + (hovered ? ARROW_SIZE * 2 : 0);
+        context.drawTexture(ARROW, x, y, u, v, ARROW_SIZE, ARROW_SIZE, ARROW_TEXTURE_WIDTH, ARROW_TEXTURE_HEIGHT);
     }
 
     @Override
-    protected void validateSize() {
-        super.validateSize();
-        scrollbarHor.updateContent();
-        scrollbarVer.updateContent();
+    public void render(DrawContext context, int mouseX, int mouseY, float partialTick) {
+        super.render(context, mouseX, mouseY, partialTick);
+        if (scrollPos > 0) renderArrow(context, mouseX, mouseY, true);
+        if (scrollPos < getContentSize() - getViewportSize()) renderArrow(context, mouseX, mouseY, false);
     }
 
-    /**
-     * Mouse wheel will affect <b>horizontal</b> scrolling and not vertical.
-     * This is the default behavior.
-     */
-    public void setWheelScrollsHorizontally() {
-        scrollbarHor.setUsesWheel(true);
-        scrollbarVer.setUsesWheel(false);
-    }
-
-    /**
-     * Mouse wheel will affect <b>vertical</b> scrolling and not horizontal.
-     */
-    public void setWheelScrollsVertically() {
-        scrollbarHor.setUsesWheel(false);
-        scrollbarVer.setUsesWheel(true);
-    }
-
-    /**
-     * Scroll to the specified point relative to the content's top left corner.
-     * The container attempts to place the specified point at the top left
-     * corner of the viewport as well.
-     */
-    public void scrollTo(int x, int y) {
-        scrollbarHor.setScrollPos(x);
-        scrollbarVer.setScrollPos(y);
+    public boolean clickArrow(double mouseX, double mouseY, boolean prev) {
+        int x = !vertical ? (prev ? getGuiX() - ARROW_SIZE : getGuiX() + getWidth()) : getGuiX() + (getWidth() - ARROW_SIZE) / 2;
+        int y = vertical ? (prev ? getGuiY() - ARROW_SIZE : getGuiY() + getHeight()) : getGuiY() + (getHeight() - ARROW_SIZE) / 2;
+        boolean hovered = new Rect2i(x, y, ARROW_SIZE, ARROW_SIZE).contains((int) mouseX, (int) mouseY);
+        if (hovered) {
+            int numSteps = (int) Math.round((double) getViewportSize() / scrollStep);
+            doSetScrollPos(scrollPos + numSteps * scrollStep * (prev ? -1 : 1));
+            MinecraftClient.getInstance().getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
+            return true;
+        }
+        return false;
     }
 
     @Override
-    public int getWidth() {
-        return super.getWidth() - (scrollbarVer.visible ? 0 : scrollbarVer.getWidth());
+    public boolean mouseClicked(double mouseX, double mouseY, int mb) {
+        if (scrollPos > 0 && clickArrow(mouseX, mouseY, true)) return true;
+        if (scrollPos < getContentSize() - getViewportSize() && clickArrow(mouseX, mouseY, false)) return true;
+        return super.mouseClicked(mouseX, mouseY, mb);
     }
 
     @Override
-    public int getHeight() {
-        return super.getHeight() - (scrollbarHor.visible ? 0 : scrollbarHor.getHeight());
+    public boolean mouseScrolled(double mx, double my, double wheelMove) {
+        if (isMouseOver(mx, my)) {
+            if (wheelMove != 0) {
+                wheelMove = wheelMove > 0 ? -1 : 1;
+                doSetScrollPos((int) (scrollPos + wheelMove * scrollStep));
+                return true;
+            }
+        }
+
+        return super.mouseScrolled(mx, my, wheelMove);
+    }
+
+    /**
+     * Offset of the viewport's content in pixels. This method forces
+     * validation of the viewport and its content in order to work correctly
+     * during initGui().
+     */
+    public void setScrollPos(int scrollPos) {
+        viewport.content.validateSize();
+        viewport.validateSize();
+        doSetScrollPos(scrollPos);
+    }
+
+    /**
+     * Offset of the viewport's content in pixels. This will only work
+     * correctly after the viewport's size has been validated.
+     */
+    private void doSetScrollPos(int scrollPos) {
+        scrollPos = Math.max(0, Math.min(scrollPos, getContentSize() - getViewportSize()));
+        this.scrollPos = scrollPos;
+        updateContentPos();
+    }
+
+    protected void updateContentPos() {
+        viewport.content.setRelativeCoords(vertical ? viewport.content.getRelativeX() : -scrollPos, vertical ? -scrollPos : viewport.content.getRelativeY());
+    }
+
+    public int getContentSize() {
+        return vertical ? viewport.contentHeight : viewport.contentWidth;
+    }
+
+    public int getViewportSize() {
+        return vertical ? viewport.getHeight() : viewport.getWidth();
+    }
+
+    public ViewportComponent getViewport() {
+        return viewport;
     }
 }

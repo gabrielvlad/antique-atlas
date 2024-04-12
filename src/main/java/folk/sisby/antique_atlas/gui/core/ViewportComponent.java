@@ -16,10 +16,7 @@ public class ViewportComponent extends Component {
      */
     final Component content = new Component();
 
-    /**
-     * Coordinate scale factor relative to the actual screen size.
-     */
-    private double screenScale;
+    private boolean hidden;
 
     public ViewportComponent() {
         this.addChild(content);
@@ -41,24 +38,23 @@ public class ViewportComponent extends Component {
     @Override
     public void init() {
         super.init();
-        screenScale = client.getWindow().getScaleFactor();
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float par3) {
-        RenderSystem.enableScissor((int) (getGuiX() * screenScale),
-            (int) (MinecraftClient.getInstance().getWindow().getFramebufferHeight() - (getGuiY() + properHeight) * screenScale),
-            (int) (properWidth * screenScale), (int) (properHeight * screenScale));
+        if (hidden) return;
+        double guiScale = client.getWindow().getScaleFactor();
+        RenderSystem.enableScissor(
+            (int) (guiScale * getGuiX()),
+            (int) (MinecraftClient.getInstance().getWindow().getFramebufferHeight() - (getGuiY() + properHeight) * guiScale),
+            (int) (guiScale * (properWidth + 1)),
+            (int) (guiScale * (properHeight + 1))
+        );
 
         // Draw the content (child GUIs):
         super.render(context, mouseX, mouseY, par3);
 
         RenderSystem.disableScissor();
-    }
-
-    @Override
-    boolean iterateMouseInput(UiCall callMethod) {
-        return iterateInput(callMethod);
     }
 
     @Override
@@ -82,5 +78,9 @@ public class ViewportComponent extends Component {
                     child.getGuiX() + child.getWidth() < getGuiX()
             );
         }
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 }
